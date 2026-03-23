@@ -5,22 +5,29 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Tuple
+from typing import Optional, Tuple
 
 
 DEFAULT_MODEL_NAME = "sithu015/XLM-RoBERTa-BiLSTM-CRF-Joint"
 
 
-def _as_bool(value: str, *, default: bool = False) -> bool:
+def _as_bool(value: Optional[str], *, default: bool = False) -> bool:
     if value is None:
         return default
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
-def _as_csv(value: str, *, default: Tuple[str, ...]) -> Tuple[str, ...]:
+def _as_csv(value: Optional[str], *, default: Tuple[str, ...]) -> Tuple[str, ...]:
     if not value:
         return default
     return tuple(item.strip() for item in value.split(",") if item.strip())
+
+
+def _as_optional_str(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    stripped = value.strip()
+    return stripped or None
 
 
 @dataclass(frozen=True)
@@ -38,6 +45,9 @@ class Settings:
     port: int
     debug: bool
     cors_allowed_origins: Tuple[str, ...]
+    enable_fallback_model: bool
+    model_revision: str
+    hf_token: Optional[str]
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -46,8 +56,7 @@ class Settings:
             app_name="Myanmar Word Segmentation & POS Tagging API",
             app_version="0.1.0",
             app_description=(
-                "Starter FastAPI service for Myanmar word segmentation and POS "
-                "tagging."
+                "FastAPI service for Myanmar word segmentation and POS tagging."
             ),
             model_name=os.getenv("MODEL_NAME", DEFAULT_MODEL_NAME),
             device=os.getenv("DEVICE", "cpu"),
@@ -60,6 +69,12 @@ class Settings:
                 os.getenv("CORS_ALLOWED_ORIGINS"),
                 default=("*",),
             ),
+            enable_fallback_model=_as_bool(
+                os.getenv("ENABLE_FALLBACK_MODEL"),
+                default=False,
+            ),
+            model_revision=os.getenv("MODEL_REVISION", "main"),
+            hf_token=_as_optional_str(os.getenv("HF_TOKEN")),
         )
 
 

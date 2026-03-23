@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, List
+from typing import Annotated, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -69,3 +69,5 @@ class HealthResponse(BaseModel):
     device: str
     backend: str
     model_loaded: bool
+    fallback_enabled: bool
+    detail: Optional[str] = None

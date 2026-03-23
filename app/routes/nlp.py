@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from time import perf_counter
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 
+from app.model import InferenceUnavailableError
 from app.schemas import (
     BatchItemResponse,
     BatchRequest,
@@ -24,7 +25,10 @@ router = APIRouter(prefix="/api/v1", tags=["nlp"])
 async def segment_text(payload: SegmentRequest, request: Request) -> SegmentResponse:
     """Segment Myanmar text into token strings."""
     started_at = perf_counter()
-    words = request.app.state.model.segment_text(payload.text)
+    try:
+        words = request.app.state.model.segment_text(payload.text)
+    except InferenceUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     return SegmentResponse(
         input=payload.text,
         words=words,
@@ -36,7 +40,10 @@ async def segment_text(payload: SegmentRequest, request: Request) -> SegmentResp
 async def tag_text(payload: SegmentRequest, request: Request) -> POSResponse:
     """Produce starter POS tags for the provided text."""
     started_at = perf_counter()
-    tagged_tokens = request.app.state.model.tag_text(payload.text)
+    try:
+        tagged_tokens = request.app.state.model.tag_text(payload.text)
+    except InferenceUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     return POSResponse(
         input=payload.text,
         tokens=[POSToken(word=word, pos=pos) for word, pos in tagged_tokens],
@@ -48,7 +55,10 @@ async def tag_text(payload: SegmentRequest, request: Request) -> POSResponse:
 async def batch_tag_text(payload: BatchRequest, request: Request) -> BatchResponse:
     """Process a batch of text strings with the starter tagger."""
     started_at = perf_counter()
-    results = request.app.state.model.batch_tag_text(payload.texts)
+    try:
+        results = request.app.state.model.batch_tag_text(payload.texts)
+    except InferenceUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     items = [
         BatchItemResponse(
             input=text,

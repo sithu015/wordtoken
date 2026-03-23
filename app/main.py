@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 import logging
+from typing import Optional
 from time import perf_counter
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.config import get_settings
+from app.config import Settings, get_settings
 from app.model import MyanmarNLPModel
 from app.routes.health import router as health_router
 from app.routes.nlp import router as nlp_router
@@ -17,19 +19,31 @@ from app.routes.nlp import router as nlp_router
 logger = logging.getLogger("wordtoken")
 
 
-def create_app() -> FastAPI:
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Load the inference model during application startup."""
+    load = getattr(app.state.model, "load", None)
+    if callable(load):
+        load()
+    yield
+
+
+def create_app(
+    *,
+    settings: Optional[Settings] = None,
+    model: Optional[MyanmarNLPModel] = None,
+) -> FastAPI:
     """Create and configure the FastAPI application."""
-    settings = get_settings()
+    settings = settings or get_settings()
     app = FastAPI(
         title=settings.app_name,
         version=settings.app_version,
         description=settings.app_description,
+        lifespan=lifespan,
     )
 
-    model = MyanmarNLPModel(settings)
-    model.load()
     app.state.settings = settings
-    app.state.model = model
+    app.state.model = model or MyanmarNLPModel(settings)
 
     app.add_middleware(
         CORSMiddleware,

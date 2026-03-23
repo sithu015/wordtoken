@@ -1,8 +1,33 @@
-"""API tests for the starter FastAPI application."""
+"""API tests for the FastAPI application."""
 
 from __future__ import annotations
 
 import pytest
+from httpx import ASGITransport, AsyncClient
+
+from app.main import create_app
+from app.model import InferenceUnavailableError
+
+
+class UnavailableModel:
+    """Model double that simulates an unavailable runtime."""
+
+    backend = "unavailable"
+    model_loaded = False
+    fallback_enabled = False
+    error_message = "Model artifacts are unavailable."
+
+    def load(self) -> None:
+        """Keep a compatible startup hook for the app."""
+
+    def segment_text(self, text: str):
+        raise InferenceUnavailableError(self.error_message)
+
+    def tag_text(self, text: str):
+        raise InferenceUnavailableError(self.error_message)
+
+    def batch_tag_text(self, texts):
+        raise InferenceUnavailableError(self.error_message)
 
 
 @pytest.mark.asyncio
@@ -14,8 +39,10 @@ async def test_health_endpoint(client):
     assert payload["status"] == "ok"
     assert payload["model"] == "sithu015/XLM-RoBERTa-BiLSTM-CRF-Joint"
     assert payload["device"] == "cpu"
-    assert payload["backend"] == "bootstrap"
-    assert payload["model_loaded"] is False
+    assert payload["backend"] == "stub"
+    assert payload["model_loaded"] is True
+    assert payload["fallback_enabled"] is False
+    assert payload["detail"] is None
 
 
 @pytest.mark.asyncio
@@ -78,3 +105,17 @@ async def test_batch_size_validation_error(client):
     )
 
     assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_unavailable_model_returns_503():
+    app = create_app(model=UnavailableModel())
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        response = await client.post(
+            "/api/v1/segment",
+            json={"text": "ကျွန်တော်သည်ကျောင်းသွားသည်"},
+        )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Model artifacts are unavailable."

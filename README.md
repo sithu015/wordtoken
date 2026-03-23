@@ -2,7 +2,7 @@
 
 A FastAPI-based backend server for Myanmar (Burmese) **Word Segmentation** and **Part-of-Speech (POS) Tagging** using the fine-tuned [`sithu015/XLM-RoBERTa-BiLSTM-CRF-Joint`](https://huggingface.co/sithu015/XLM-RoBERTa-BiLSTM-CRF-Joint) model.
 
-This repository now includes the initial application scaffold, validation layer, test suite, and deployment/configuration files needed to start implementation. The current inference flow is a bootstrap placeholder and should be replaced with the actual HuggingFace-backed decoding logic during the next phase.
+This repository now includes the application scaffold, actual Hugging Face artifact loading path, validation layer, test suite, and deployment/configuration files needed to run the API. On first startup the service downloads the fine-tuned checkpoint (`best_model.pt`, about 1.1 GB) from Hugging Face. If you explicitly enable fallback mode, the API can still boot with a lightweight heuristic segmenter when the model is unavailable.
 
 ---
 
@@ -26,7 +26,7 @@ myanmar-nlp-api/
 │   ├── __init__.py
 │   ├── config.py            # Environment-backed settings
 │   ├── main.py              # FastAPI app entry point
-│   ├── model.py             # Starter inference service
+│   ├── model.py             # Hugging Face-backed inference service
 │   ├── routes/
 │   │   ├── health.py        # Health check routes
 │   │   └── nlp.py           # Segmentation/POS routes
@@ -210,6 +210,9 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 | `MODEL_NAME`     | `sithu015/XLM-RoBERTa-BiLSTM-CRF-Joint`         | HuggingFace model ID     |
 | `DEVICE`         | `cpu`                                            | `cpu` or `cuda`          |
 | `MAX_LENGTH`     | `512`                                            | Max token sequence length |
+| `ENABLE_FALLBACK_MODEL` | `false`                                   | Use heuristic fallback if model load fails |
+| `MODEL_REVISION` | `main`                                          | Hugging Face revision/tag |
+| `HF_TOKEN`       | empty                                           | Optional Hugging Face token |
 | `HOST`           | `0.0.0.0`                                        | Server host              |
 | `PORT`           | `8000`                                           | Server port              |
 
