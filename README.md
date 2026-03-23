@@ -41,6 +41,7 @@ myanmar-nlp-api/
 ├── .gitignore
 ├── .dockerignore
 ├── deploy/
+│   ├── Caddyfile            # Caddy reverse proxy for production HTTPS
 │   └── wordtoken.service   # systemd unit for Linux servers
 ├── Dockerfile
 ├── .env.example
@@ -130,6 +131,16 @@ sudo systemctl enable --now wordtoken
 ```
 
 This path avoids large Docker image exports and keeps the Hugging Face cache on disk at `/opt/wordtoken/.cache/huggingface`.
+
+### 7. Put Caddy in front for HTTPS
+```bash
+sudo apt-get update
+sudo apt-get install -y caddy
+sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
+sudo systemctl reload caddy
+```
+
+The bundled [Caddyfile](/Users/sithuaung/.codex/worktrees/2e6b/wordtoken/deploy/Caddyfile) terminates TLS for `wordtoken.ygn.app` and reverse proxies traffic to the API on `127.0.0.1:8000`.
 
 ---
 
