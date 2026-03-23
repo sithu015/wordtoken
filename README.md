@@ -70,13 +70,15 @@ pip install -r requirements-dev.txt
 
 **`requirements.txt`:**
 ```
-fastapi>=0.110.0
-uvicorn[standard]>=0.29.0
-transformers>=4.35.0
-torch>=2.0.0
-numpy>=1.24.0
-python-dotenv>=1.0.0
-pydantic>=2.0.0
+fastapi==0.135.1
+uvicorn[standard]==0.42.0
+transformers==5.3.0
+huggingface-hub==1.7.2
+torch==2.10.0
+pytorch-crf==0.7.2
+numpy==2.4.3
+python-dotenv==1.2.2
+pydantic==2.12.5
 ```
 
 ---
@@ -192,12 +194,19 @@ Server health check endpoint။
 ```dockerfile
 FROM python:3.11-slim
 
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
 WORKDIR /app
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY app ./app
+COPY README.md ./
+
 EXPOSE 8000
+
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
@@ -210,6 +219,7 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 | `MODEL_NAME`     | `sithu015/XLM-RoBERTa-BiLSTM-CRF-Joint`         | HuggingFace model ID     |
 | `DEVICE`         | `cpu`                                            | `cpu` or `cuda`          |
 | `MAX_LENGTH`     | `512`                                            | Max token sequence length |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:3000,http://127.0.0.1:3000` | Comma-separated trusted origins |
 | `ENABLE_FALLBACK_MODEL` | `false`                                   | Use heuristic fallback if model load fails |
 | `MODEL_REVISION` | `main`                                          | Hugging Face revision/tag |
 | `HF_TOKEN`       | empty                                           | Optional Hugging Face token |

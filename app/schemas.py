@@ -44,7 +44,7 @@ class POSResponse(BaseModel):
 class BatchRequest(BaseModel):
     """Input payload for batch inference."""
 
-    texts: List[TextField] = Field(min_length=1, max_length=32)
+    texts: List[TextField] = Field(min_length=1)
 
 
 class BatchItemResponse(BaseModel):

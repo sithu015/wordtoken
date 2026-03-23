@@ -159,7 +159,6 @@ def decode_bio_tags(tokens: Sequence[str], labels: Sequence[str]) -> List[Tuple[
 
         if prefix in {"I", "E"}:
             current_word += piece
-            current_pos = pos or current_pos
             if prefix == "E":
                 decoded.append((current_word, current_pos))
                 current_word = ""
