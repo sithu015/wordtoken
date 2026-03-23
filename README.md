@@ -42,7 +42,10 @@ myanmar-nlp-api/
 ├── .dockerignore
 ├── deploy/
 │   ├── Caddyfile            # Caddy reverse proxy for production HTTPS
-│   └── wordtoken.service   # systemd unit for Linux servers
+│   ├── remote_deploy.sh     # Remote deployment script used by GitHub Actions
+│   └── wordtoken.service    # systemd unit for Linux servers
+├── .github/workflows/
+│   └── deploy.yml           # Test + production deployment workflow
 ├── Dockerfile
 ├── .env.example
 ├── AGENT.md
@@ -87,6 +90,13 @@ pydantic==2.12.5
 ---
 
 ## 🚀 Quick Start
+
+Production docs are served directly by the API:
+
+- `https://wordtoken.ygn.app/` — public product overview
+- `https://wordtoken.ygn.app/wiki` — operations wiki
+- `https://wordtoken.ygn.app/docs` — Swagger UI
+- `https://wordtoken.ygn.app/redoc` — ReDoc
 
 ### 1. Clone the repository
 ```bash
@@ -141,6 +151,26 @@ sudo systemctl reload caddy
 ```
 
 The bundled [Caddyfile](/Users/sithuaung/.codex/worktrees/2e6b/wordtoken/deploy/Caddyfile) terminates TLS for `wordtoken.ygn.app` and reverse proxies traffic to the API on `127.0.0.1:8000`.
+
+### 8. GitHub Actions production deploys
+Pushes to `main` trigger [.github/workflows/deploy.yml](/Users/sithuaung/.codex/worktrees/2e6b/wordtoken/.github/workflows/deploy.yml), which:
+
+1. runs the test suite
+2. syncs the repository to the server over SSH
+3. executes [deploy/remote_deploy.sh](/Users/sithuaung/.codex/worktrees/2e6b/wordtoken/deploy/remote_deploy.sh)
+4. waits for the production health endpoint to recover
+
+Repository variables required by the workflow:
+
+- `DEPLOY_HOST`
+- `DEPLOY_USER`
+- `DEPLOY_PORT`
+- `DEPLOY_PATH`
+- `SITE_URL`
+
+Repository secret required by the workflow:
+
+- `DEPLOY_SSH_KEY`
 
 ---
 
