@@ -7,6 +7,11 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import Optional, Tuple
 
+from dotenv import load_dotenv
+
+
+load_dotenv()
+
 
 DEFAULT_MODEL_NAME = "sithu015/XLM-RoBERTa-BiLSTM-CRF-Joint"
 
