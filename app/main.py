@@ -14,6 +14,7 @@ from app.config import Settings, get_settings
 from app.model import MyanmarNLPModel
 from app.routes.health import router as health_router
 from app.routes.nlp import router as nlp_router
+from app.routes.site import router as site_router
 
 
 logger = logging.getLogger("wordtoken")
@@ -70,6 +71,7 @@ def create_app(
 
     app.include_router(health_router)
     app.include_router(nlp_router)
+    app.include_router(site_router)
 
     return app
 
