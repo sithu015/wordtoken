@@ -54,6 +54,13 @@ async def tag_text(payload: SegmentRequest, request: Request) -> POSResponse:
 @router.post("/batch", response_model=BatchResponse, summary="Batch tag text")
 async def batch_tag_text(payload: BatchRequest, request: Request) -> BatchResponse:
     """Process a batch of text strings with the starter tagger."""
+    max_batch_size = request.app.state.settings.max_batch_size
+    if len(payload.texts) > max_batch_size:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Batch size exceeds MAX_BATCH_SIZE={max_batch_size}.",
+        )
+
     started_at = perf_counter()
     try:
         results = request.app.state.model.batch_tag_text(payload.texts)
