@@ -40,6 +40,8 @@ myanmar-nlp-api/
 ├── pyproject.toml
 ├── .gitignore
 ├── .dockerignore
+├── deploy/
+│   └── wordtoken.service   # systemd unit for Linux servers
 ├── Dockerfile
 ├── .env.example
 ├── AGENT.md
@@ -107,6 +109,27 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 docker build -t myanmar-nlp-api .
 docker run -p 8000:8000 myanmar-nlp-api
 ```
+
+### 5. Run with Docker Compose
+```bash
+cp .env.example .env
+docker compose up -d --build
+```
+
+The first container startup downloads the Hugging Face checkpoint, so the initial boot can take several minutes.
+
+### 6. Run with systemd on a Linux server
+```bash
+sudo useradd --system --create-home --home-dir /opt/wordtoken wordtoken
+sudo rsync -az . /opt/wordtoken/
+sudo python3 -m venv /opt/wordtoken/.venv
+sudo /opt/wordtoken/.venv/bin/pip install -r /opt/wordtoken/requirements.txt
+sudo cp deploy/wordtoken.service /etc/systemd/system/wordtoken.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now wordtoken
+```
+
+This path avoids large Docker image exports and keeps the Hugging Face cache on disk at `/opt/wordtoken/.cache/huggingface`.
 
 ---
 
@@ -209,6 +232,8 @@ EXPOSE 8000
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
+
+For a persistent deployment with cached model artifacts, use [compose.yaml](/Users/sithuaung/.codex/worktrees/2e6b/wordtoken/compose.yaml).
 
 ---
 
