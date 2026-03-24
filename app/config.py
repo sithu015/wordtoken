@@ -50,6 +50,7 @@ class Settings:
     port: int
     debug: bool
     cors_allowed_origins: Tuple[str, ...]
+    api_keys: Tuple[str, ...]
     enable_fallback_model: bool
     model_revision: str
     hf_token: Optional[str]
@@ -73,6 +74,10 @@ class Settings:
             cors_allowed_origins=_as_csv(
                 os.getenv("CORS_ALLOWED_ORIGINS"),
                 default=("*",),
+            ),
+            api_keys=_as_csv(
+                os.getenv("API_KEYS"),
+                default=(),
             ),
             enable_fallback_model=_as_bool(
                 os.getenv("ENABLE_FALLBACK_MODEL"),

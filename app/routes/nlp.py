@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from time import perf_counter
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 
+from app.auth import require_api_key
 from app.model import InferenceUnavailableError
 from app.schemas import (
     BatchItemResponse,
@@ -18,7 +19,11 @@ from app.schemas import (
 )
 
 
-router = APIRouter(prefix="/api/v1", tags=["nlp"])
+router = APIRouter(
+    prefix="/api/v1",
+    tags=["nlp"],
+    dependencies=[Depends(require_api_key)],
+)
 
 
 @router.post("/segment", response_model=SegmentResponse, summary="Segment text")

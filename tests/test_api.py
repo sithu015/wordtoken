@@ -119,3 +119,37 @@ async def test_unavailable_model_returns_503():
 
     assert response.status_code == 503
     assert response.json()["detail"] == "Model artifacts are unavailable."
+
+
+@pytest.mark.asyncio
+async def test_segment_endpoint_requires_api_key_when_enabled(auth_client):
+    response = await auth_client.post(
+        "/api/v1/segment",
+        json={"text": "မြန်မာ ဘာသာ။"},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "A valid X-API-Key header is required."
+
+
+@pytest.mark.asyncio
+async def test_segment_endpoint_accepts_valid_api_key(auth_client):
+    response = await auth_client.post(
+        "/api/v1/segment",
+        headers={"X-API-Key": "test-api-key"},
+        json={"text": "မြန်မာ ဘာသာ။"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["words"] == ["မြန်မာ", "ဘာသာ", "။"]
+
+
+@pytest.mark.asyncio
+async def test_openapi_schema_exposes_api_key_security(auth_client):
+    response = await auth_client.get("/openapi.json")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["components"]["securitySchemes"]["ApiKeyAuth"]["type"] == "apiKey"
+    assert payload["components"]["securitySchemes"]["ApiKeyAuth"]["name"] == "X-API-Key"
+    assert payload["paths"]["/api/v1/segment"]["post"]["security"] == [{"ApiKeyAuth": []}]
