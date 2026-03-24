@@ -361,6 +361,7 @@ def _status_panel(request: Request) -> str:
     settings = request.app.state.settings
     model = request.app.state.model
     health_state = "Ready" if model.model_loaded else "Degraded"
+    auth_state = "enabled" if settings.api_keys else "disabled"
     return dedent(
         f"""\
         <aside class="panel status-panel">
@@ -388,6 +389,10 @@ def _status_panel(request: Request) -> str:
             <div class="status-card">
               <span class="status-label">Fallback</span>
               <span class="status-value">{'enabled' if model.fallback_enabled else 'disabled'}</span>
+            </div>
+            <div class="status-card">
+              <span class="status-label">API key auth</span>
+              <span class="status-value">{escape(auth_state)}</span>
             </div>
           </div>
         </aside>
@@ -431,24 +436,36 @@ async def overview(request: Request) -> HTMLResponse:
               <article class="card">
                 <div class="pill">POST /api/v1/segment</div>
                 <h3>Segment Myanmar text</h3>
-                <p>Returns a list of token strings for a single input sentence.</p>
+                <p>
+                  Returns a list of token strings for a single input sentence.
+                  Send <code>X-API-Key</code> when API key auth is enabled.
+                </p>
                 <pre class="code">curl -X POST https://wordtoken.ygn.app/api/v1/segment \\
+  -H 'X-API-Key: YOUR_API_KEY' \\
   -H 'content-type: application/json' \\
   -d '{{"text":"ကျွန်တော်သည်ကျောင်းသွားသည်"}}'</pre>
               </article>
               <article class="card">
                 <div class="pill">POST /api/v1/pos</div>
                 <h3>Joint segmentation + POS</h3>
-                <p>Returns token/POS pairs in one call for downstream NLP apps.</p>
+                <p>
+                  Returns token/POS pairs in one call for downstream NLP apps.
+                  API keys apply to this route as well.
+                </p>
                 <pre class="code">curl -X POST https://wordtoken.ygn.app/api/v1/pos \\
+  -H 'X-API-Key: YOUR_API_KEY' \\
   -H 'content-type: application/json' \\
   -d '{{"text":"ကျွန်တော်သည်ကျောင်းသွားသည်"}}'</pre>
               </article>
               <article class="card">
                 <div class="pill">POST /api/v1/batch</div>
                 <h3>Batch processing</h3>
-                <p>Processes multiple strings per request with batch-size controls.</p>
+                <p>
+                  Processes multiple strings per request with batch-size controls
+                  and the same header-based auth.
+                </p>
                 <pre class="code">curl -X POST https://wordtoken.ygn.app/api/v1/batch \\
+  -H 'X-API-Key: YOUR_API_KEY' \\
   -H 'content-type: application/json' \\
   -d '{{"texts":["မင်္ဂလာပါ","hello world"]}}'</pre>
               </article>
@@ -464,9 +481,14 @@ async def overview(request: Request) -> HTMLResponse:
                 Caddy, and the OpenAPI UIs stay available at <code>/docs</code>
                 and <code>/redoc</code>.
               </p>
+              <p>
+                If <code>API_KEYS</code> is configured on the server, include
+                <code>X-API-Key</code> on every <code>/api/v1/*</code> request.
+              </p>
               <pre class="code">curl https://wordtoken.ygn.app/health
 
 curl -X POST https://wordtoken.ygn.app/api/v1/segment \\
+  -H 'X-API-Key: YOUR_API_KEY' \\
   -H 'content-type: application/json' \\
   -d '{{"text":"မြန်မာဘာသာသည်လှပသောဘာသာတစ်ခုဖြစ်သည်"}}'</pre>
             </div>
@@ -649,6 +671,7 @@ journalctl -u caddy -n 100 --no-pager</pre>
               <ul class="list">
                 <li><strong>502/connection reset:</strong> the container is still loading the model or crashed during startup.</li>
                 <li><strong>Health says degraded:</strong> check container logs for Hugging Face download errors or missing runtime dependencies.</li>
+                <li><strong>401 on API requests:</strong> verify the <code>X-API-Key</code> header matches one of the configured <code>API_KEYS</code>.</li>
                 <li><strong>TLS problems:</strong> inspect <code>systemctl status caddy</code> and ensure DNS still points to the server.</li>
                 <li><strong>Slow cold boots:</strong> keep the Hugging Face cache volume intact between releases.</li>
               </ul>
