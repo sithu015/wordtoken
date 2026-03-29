@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import json
 import logging
+import os
+import shutil
+import tempfile
 from typing import Dict, List, Optional, Sequence, Tuple
 
 from app.config import Settings
@@ -17,10 +20,12 @@ from app.utils import (
 
 logger = logging.getLogger("wordtoken")
 MYANMAR_CODEPOINT_RANGE = ("\u1000", "\u109f")
+MYANBERTA_BASE_MODEL = "UCSYNLP/MyanBERTa"
+MYANBERTA_RECOMMENDED_MAX_LENGTH = 300
 
 try:
     import torch
-    from huggingface_hub import hf_hub_download
+    from huggingface_hub import hf_hub_download, snapshot_download
     from torch import nn
     from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
     from torchcrf import CRF
@@ -28,6 +33,7 @@ try:
 except ImportError:  # pragma: no cover - exercised only when runtime deps are absent.
     torch = None
     hf_hub_download = None
+    snapshot_download = None
     nn = None
     pack_padded_sequence = None
     pad_packed_sequence = None
@@ -64,7 +70,7 @@ def _build_distance_positions(attention_mask, embedding_size: int):
 if nn is not None:
 
     class JointSegPosModel(nn.Module):
-        """Reconstructed XLM-RoBERTa + asymmetric BiLSTM + dual CRF network."""
+        """Reconstructed transformer + asymmetric BiLSTM + dual CRF network."""
 
         def __init__(
             self,
@@ -191,6 +197,7 @@ class MyanmarNLPModel:
         self._ws_id2label: Dict[int, str] = {}
         self._pos_id2label: Dict[int, str] = {}
         self._max_length = settings.max_length
+        self._tokenizer_workspace: Optional[tempfile.TemporaryDirectory[str]] = None
 
     def load(self) -> None:
         """Load model artifacts into memory."""
@@ -232,10 +239,7 @@ class MyanmarNLPModel:
             network.to(self._device)
             network.eval()
 
-            self._tokenizer = AutoTokenizer.from_pretrained(
-                base_model_name,
-                token=self.settings.hf_token,
-            )
+            self._tokenizer = self._load_tokenizer(base_model_name)
             self._model = network
             self._ws_id2label = {
                 int(value): key for key, value in model_config["ws_label2id"].items()
@@ -244,7 +248,7 @@ class MyanmarNLPModel:
                 int(value): key for key, value in model_config["pos_label2id"].items()
             }
             self._max_length = min(
-                int(self.settings.max_length),
+                self._resolve_runtime_max_length(base_model_name),
                 int(network.pos_embedding.num_embeddings),
             )
             self.backend = "huggingface"
@@ -364,6 +368,77 @@ class MyanmarNLPModel:
             revision=self.settings.model_revision,
             token=self.settings.hf_token,
         )
+
+    def _load_tokenizer(self, base_model_name: str):
+        """Load the tokenizer, retrying with the notebook compatibility patch if needed."""
+        try:
+            return AutoTokenizer.from_pretrained(
+                base_model_name,
+                token=self.settings.hf_token,
+            )
+        except Exception as exc:
+            logger.warning(
+                "Tokenizer load for %s failed (%s). Retrying with patched tokenizer_config.json.",
+                base_model_name,
+                exc,
+            )
+            return self._load_patched_tokenizer(base_model_name)
+
+    def _load_patched_tokenizer(self, base_model_name: str):
+        """Patch tokenizer assets locally before loading them with transformers."""
+        if snapshot_download is None:
+            raise RuntimeError("huggingface_hub snapshot_download is unavailable.")
+
+        snapshot_dir = snapshot_download(
+            repo_id=base_model_name,
+            allow_patterns=[
+                "tokenizer*",
+                "vocab*",
+                "merges*",
+                "special_tokens*",
+            ],
+            token=self.settings.hf_token,
+        )
+
+        workspace = tempfile.TemporaryDirectory(prefix="wordtoken-tokenizer-")
+        shutil.copytree(snapshot_dir, workspace.name, dirs_exist_ok=True)
+        config_path = os.path.join(workspace.name, "tokenizer_config.json")
+        if self._patch_tokenizer_config(config_path):
+            logger.info(
+                "Patched tokenizer_config.json for %s compatibility before loading.",
+                base_model_name,
+            )
+
+        tokenizer = AutoTokenizer.from_pretrained(workspace.name)
+        self._tokenizer_workspace = workspace
+        return tokenizer
+
+    @staticmethod
+    def _patch_tokenizer_config(tokenizer_config_path: str) -> bool:
+        """Remove incompatible tokenizer metadata emitted by the training notebook."""
+        if not os.path.exists(tokenizer_config_path):
+            return False
+
+        with open(tokenizer_config_path, "r", encoding="utf-8") as config_file:
+            tokenizer_config = json.load(config_file)
+
+        original = dict(tokenizer_config)
+        tokenizer_config.pop("post_processor", None)
+        tokenizer_config.pop("model", None)
+
+        if tokenizer_config == original:
+            return False
+
+        with open(tokenizer_config_path, "w", encoding="utf-8") as config_file:
+            json.dump(tokenizer_config, config_file, ensure_ascii=False, indent=2)
+
+        return True
+
+    def _resolve_runtime_max_length(self, base_model_name: str) -> int:
+        """Clamp max_length to the range the selected checkpoint was trained with."""
+        if base_model_name == MYANBERTA_BASE_MODEL:
+            return min(int(self.settings.max_length), MYANBERTA_RECOMMENDED_MAX_LENGTH)
+        return int(self.settings.max_length)
 
     def _resolve_device(self):
         """Resolve the target inference device."""

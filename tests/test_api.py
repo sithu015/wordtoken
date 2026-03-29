@@ -37,7 +37,7 @@ async def test_health_endpoint(client):
     assert response.status_code == 200
     payload = response.json()
     assert payload["status"] == "ok"
-    assert payload["model"] == "sithu015/XLM-RoBERTa-BiLSTM-CRF-Joint"
+    assert payload["model"] == "sithu015/MyanBERTa-BiLSTM-CRF-Joint"
     assert payload["device"] == "cpu"
     assert payload["backend"] == "stub"
     assert payload["model_loaded"] is True

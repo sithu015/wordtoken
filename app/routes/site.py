@@ -413,7 +413,7 @@ async def overview(request: Request) -> HTMLResponse:
               Wordtoken exposes a focused API for Myanmar word segmentation,
               POS tagging, and batch inference. The service is live at
               <strong>wordtoken.ygn.app</strong> and fronts a Hugging Face-backed
-              XLM-RoBERTa + BiLSTM + CRF model behind Caddy HTTPS.
+              MyanBERTa + BiLSTM + CRF model behind Caddy HTTPS.
             </p>
             <p>
               Use this landing page for fast onboarding, and open the wiki for
@@ -584,7 +584,7 @@ async def wiki(request: Request) -> HTMLResponse:
   -> reverse_proxy 127.0.0.1:8000
   -> FastAPI container (wordtoken)
   -> Hugging Face cache volume
-  -> XLM-RoBERTa + BiLSTM + CRF inference</pre>
+  -> MyanBERTa + BiLSTM + CRF inference</pre>
               <p>
                 The public site terminates TLS in Caddy. The API container is
                 only bound on loopback, so traffic reaches it through the reverse
@@ -595,7 +595,7 @@ async def wiki(request: Request) -> HTMLResponse:
               <div class="pill">Startup</div>
               <h2>Model lifecycle</h2>
               <ul class="list">
-                <li>The first cold boot downloads roughly 1.1 GB of model artifacts from Hugging Face.</li>
+                <li>The first cold boot downloads roughly 430 MB of model artifacts from Hugging Face.</li>
                 <li>Downloaded files are cached in the Docker volume <code>wordtoken_huggingface_cache</code>.</li>
                 <li>The health endpoint stays degraded until the model is fully loaded.</li>
                 <li>Subsequent restarts are much faster because the cache is reused.</li>
