@@ -1,15 +1,22 @@
+# syntax=docker/dockerfile:1.7
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_ROOT_USER_ACTION=ignore
+
+ARG TORCH_VERSION=2.10.0
+ARG TORCH_INDEX_URL=https://download.pytorch.org/whl/cpu
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt requirements-docker.txt ./
+RUN --mount=type=cache,target=/root/.cache/pip \
+    python -m pip install -r requirements-docker.txt && \
+    python -m pip install --index-url "${TORCH_INDEX_URL}" "torch==${TORCH_VERSION}"
 
 COPY app ./app
-COPY README.md LICENSE ./
 
 EXPOSE 8000
 

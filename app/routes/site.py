@@ -413,7 +413,7 @@ async def overview(request: Request) -> HTMLResponse:
               Wordtoken exposes a focused API for Myanmar word segmentation,
               POS tagging, and batch inference. The service is live at
               <strong>wordtoken.ygn.app</strong> and fronts a Hugging Face-backed
-              MyanBERTa + BiLSTM + CRF model behind Caddy HTTPS.
+              CPU-only MyanBERTa + BiLSTM + CRF model behind Caddy HTTPS.
             </p>
             <p>
               Use this landing page for fast onboarding, and open the wiki for
@@ -582,7 +582,7 @@ async def wiki(request: Request) -> HTMLResponse:
               <pre class="code">Client
   -> Caddy :443 / :80
   -> reverse_proxy 127.0.0.1:8000
-  -> FastAPI container (wordtoken)
+  -> FastAPI container (wordtoken, CPU-only torch)
   -> Hugging Face cache volume
   -> MyanBERTa + BiLSTM + CRF inference</pre>
               <p>
@@ -596,6 +596,7 @@ async def wiki(request: Request) -> HTMLResponse:
               <h2>Model lifecycle</h2>
               <ul class="list">
                 <li>The first cold boot downloads roughly 430 MB of model artifacts from Hugging Face.</li>
+                <li>The Docker image now installs the CPU-only PyTorch wheel to keep rebuilds smaller and avoid CUDA packages on the server.</li>
                 <li>Downloaded files are cached in the Docker volume <code>wordtoken_huggingface_cache</code>.</li>
                 <li>The health endpoint stays degraded until the model is fully loaded.</li>
                 <li>Subsequent restarts are much faster because the cache is reused.</li>
@@ -611,7 +612,7 @@ async def wiki(request: Request) -> HTMLResponse:
                 <li>Push or merge a change into <code>main</code>.</li>
                 <li>GitHub Actions checks out the repository and runs the test suite.</li>
                 <li>The workflow syncs the repository to <code>/opt/wordtoken</code> over SSH.</li>
-                <li>The remote deploy script rebuilds the Docker image and replaces the running container.</li>
+                <li>The remote deploy script rebuilds the Docker image with the CPU-only PyTorch index and replaces the running container.</li>
                 <li>The script waits for <code>http://127.0.0.1:8000/health</code> to return successfully before completing.</li>
               </ol>
             </div>

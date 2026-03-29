@@ -37,6 +37,7 @@ myanmar-nlp-api/
 │   ├── conftest.py          # Shared async client fixture
 │   └── test_api.py          # Unit tests
 ├── requirements.txt
+├── requirements-docker.txt  # Docker runtime deps without torch
 ├── requirements-dev.txt
 ├── pyproject.toml
 ├── .gitignore
@@ -77,11 +78,16 @@ pip install -r requirements-dev.txt
 
 **`requirements.txt`:**
 ```
+-r requirements-docker.txt
+torch==2.10.0
+```
+
+**`requirements-docker.txt`:**
+```
 fastapi==0.135.1
 uvicorn[standard]==0.42.0
 transformers==5.3.0
 huggingface-hub==1.7.2
-torch==2.10.0
 pytorch-crf==0.7.2
 numpy==2.4.3
 python-dotenv==1.2.2
@@ -294,23 +300,33 @@ Server health check endpoint။
 ## 🐳 Docker Deployment
 
 ```dockerfile
+# syntax=docker/dockerfile:1.7
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_ROOT_USER_ACTION=ignore
+
+ARG TORCH_VERSION=2.10.0
+ARG TORCH_INDEX_URL=https://download.pytorch.org/whl/cpu
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt requirements-docker.txt ./
+RUN --mount=type=cache,target=/root/.cache/pip \
+    python -m pip install -r requirements-docker.txt && \
+    python -m pip install --index-url "${TORCH_INDEX_URL}" "torch==${TORCH_VERSION}"
 
 COPY app ./app
-COPY README.md ./
 
 EXPOSE 8000
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
+
+This Docker path installs the official CPU-only PyTorch wheel so production
+rebuilds avoid downloading the full CUDA dependency stack.
 
 For a persistent deployment with cached model artifacts, use [compose.yaml](/Users/sithuaung/.codex/worktrees/2e6b/wordtoken/compose.yaml).
 
