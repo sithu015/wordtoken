@@ -8,7 +8,7 @@ from dataclasses import replace
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from app.config import get_settings
+from app.config import DEFAULT_MAX_LENGTH, DEFAULT_MODEL_NAME, get_settings
 from app.main import create_app
 
 
@@ -40,7 +40,12 @@ class StubModel:
 @pytest.fixture
 async def client() -> AsyncIterator[AsyncClient]:
     """Create an async test client for the FastAPI app."""
-    app = create_app(model=StubModel())
+    settings = replace(
+        get_settings(),
+        model_name=DEFAULT_MODEL_NAME,
+        max_length=DEFAULT_MAX_LENGTH,
+    )
+    app = create_app(settings=settings, model=StubModel())
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://testserver") as test_client:
         yield test_client
@@ -49,7 +54,12 @@ async def client() -> AsyncIterator[AsyncClient]:
 @pytest.fixture
 async def auth_client() -> AsyncIterator[AsyncClient]:
     """Create a client with API key auth enabled."""
-    settings = replace(get_settings(), api_keys=("test-api-key",))
+    settings = replace(
+        get_settings(),
+        model_name=DEFAULT_MODEL_NAME,
+        max_length=DEFAULT_MAX_LENGTH,
+        api_keys=("test-api-key",),
+    )
     app = create_app(settings=settings, model=StubModel())
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://testserver") as test_client:

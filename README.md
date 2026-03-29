@@ -1,8 +1,8 @@
 # Myanmar Word Segmentation & POS Tagging API
 
-A FastAPI-based backend server for Myanmar (Burmese) **Word Segmentation** and **Part-of-Speech (POS) Tagging** using the fine-tuned [`sithu015/XLM-RoBERTa-BiLSTM-CRF-Joint`](https://huggingface.co/sithu015/XLM-RoBERTa-BiLSTM-CRF-Joint) model.
+A FastAPI-based backend server for Myanmar (Burmese) **Word Segmentation** and **Part-of-Speech (POS) Tagging** using the fine-tuned [`sithu015/MyanBERTa-BiLSTM-CRF-Joint`](https://huggingface.co/sithu015/MyanBERTa-BiLSTM-CRF-Joint) model.
 
-This repository now includes the application scaffold, actual Hugging Face artifact loading path, validation layer, test suite, and deployment/configuration files needed to run the API. On first startup the service downloads the fine-tuned checkpoint (`best_model.pt`, about 1.1 GB) from Hugging Face. If you explicitly enable fallback mode, the API can still boot with a lightweight heuristic segmenter when the model is unavailable.
+This repository now includes the application scaffold, actual Hugging Face artifact loading path, validation layer, test suite, and deployment/configuration files needed to run the API. On first startup the service downloads the fine-tuned checkpoint (`best_model.pt`, about 430 MB) from Hugging Face. If you explicitly enable fallback mode, the API can still boot with a lightweight heuristic segmenter when the model is unavailable.
 
 ---
 
@@ -10,11 +10,11 @@ This repository now includes the application scaffold, actual Hugging Face artif
 
 | Property        | Detail                                      |
 |----------------|---------------------------------------------|
-| Base Model     | `xlm-roberta-base`                          |
-| Architecture   | XLM-RoBERTa + BiLSTM + CRF (Joint)         |
+| Base Model     | `UCSYNLP/MyanBERTa`                         |
+| Architecture   | MyanBERTa + BiLSTM + CRF (Joint)           |
 | Tasks          | Word Segmentation + POS Tagging (Joint)     |
 | Language       | Myanmar (Burmese)                           |
-| Hub            | [sithu015/XLM-RoBERTa-BiLSTM-CRF-Joint](https://huggingface.co/sithu015/XLM-RoBERTa-BiLSTM-CRF-Joint) |
+| Hub            | [sithu015/MyanBERTa-BiLSTM-CRF-Joint](https://huggingface.co/sithu015/MyanBERTa-BiLSTM-CRF-Joint) |
 
 ---
 
@@ -86,6 +86,7 @@ pytorch-crf==0.7.2
 numpy==2.4.3
 python-dotenv==1.2.2
 pydantic==2.12.5
+protobuf==7.34.1
 ```
 
 ---
@@ -184,6 +185,16 @@ The API supports header-based auth through `X-API-Key`.
 - Only `/api/v1/*` routes require the key by default.
 - `/`, `/wiki`, `/docs`, `/redoc`, and `/health` remain public.
 
+### 10. MyanBERTa tokenizer compatibility
+The `UCSYNLP/MyanBERTa` tokenizer ships a `tokenizer_config.json` layout that breaks
+on recent `transformers` releases. The runtime now mirrors the training notebook:
+
+- it snapshots the tokenizer assets locally
+- removes the incompatible `post_processor` and `model` fields
+- loads the patched tokenizer before running inference
+
+This workaround is automatic. You do not need to patch the tokenizer manually.
+
 ---
 
 ## 📡 API Endpoints
@@ -273,7 +284,7 @@ Server health check endpoint။
 ```json
 {
   "status": "ok",
-  "model": "sithu015/XLM-RoBERTa-BiLSTM-CRF-Joint",
+  "model": "sithu015/MyanBERTa-BiLSTM-CRF-Joint",
   "device": "cpu"
 }
 ```
@@ -309,9 +320,9 @@ For a persistent deployment with cached model artifacts, use [compose.yaml](/Use
 
 | Variable          | Default                                          | Description              |
 |------------------|--------------------------------------------------|--------------------------|
-| `MODEL_NAME`     | `sithu015/XLM-RoBERTa-BiLSTM-CRF-Joint`         | HuggingFace model ID     |
+| `MODEL_NAME`     | `sithu015/MyanBERTa-BiLSTM-CRF-Joint`           | HuggingFace model ID     |
 | `DEVICE`         | `cpu`                                            | `cpu` or `cuda`          |
-| `MAX_LENGTH`     | `512`                                            | Max token sequence length |
+| `MAX_LENGTH`     | `300`                                            | Max token sequence length |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:3000,http://127.0.0.1:3000` | Comma-separated trusted origins |
 | `ENABLE_FALLBACK_MODEL` | `false`                                   | Use heuristic fallback if model load fails |
 | `MODEL_REVISION` | `main`                                          | Hugging Face revision/tag |
@@ -333,10 +344,10 @@ MIT License — see [LICENSE](LICENSE) for details.
 Model developed by **Sithu Aung**. If you use this API in research, please cite the original model:
 
 ```
-@misc{sithu015-xlm-roberta-bilstm-crf-joint,
+@misc{sithu015-myanberta-bilstm-crf-joint,
   author    = {Sithu Aung},
-  title     = {XLM-RoBERTa-BiLSTM-CRF-Joint for Myanmar NLP},
-  year      = {2024},
+  title     = {MyanBERTa-BiLSTM-CRF-Joint for Myanmar NLP},
+  year      = {2026},
   publisher = {HuggingFace},
-  url       = {https://huggingface.co/sithu015/XLM-RoBERTa-BiLSTM-CRF-Joint}
+  url       = {https://huggingface.co/sithu015/MyanBERTa-BiLSTM-CRF-Joint}
 }

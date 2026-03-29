@@ -13,7 +13,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-DEFAULT_MODEL_NAME = "sithu015/XLM-RoBERTa-BiLSTM-CRF-Joint"
+DEFAULT_MODEL_NAME = "sithu015/MyanBERTa-BiLSTM-CRF-Joint"
+DEFAULT_MAX_LENGTH = 300
 
 
 def _as_bool(value: Optional[str], *, default: bool = False) -> bool:
@@ -66,7 +67,7 @@ class Settings:
             ),
             model_name=os.getenv("MODEL_NAME", DEFAULT_MODEL_NAME),
             device=os.getenv("DEVICE", "cpu"),
-            max_length=int(os.getenv("MAX_LENGTH", "512")),
+            max_length=int(os.getenv("MAX_LENGTH", str(DEFAULT_MAX_LENGTH))),
             max_batch_size=int(os.getenv("MAX_BATCH_SIZE", "32")),
             host=os.getenv("HOST", "0.0.0.0"),
             port=int(os.getenv("PORT", "8000")),
