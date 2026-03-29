@@ -9,10 +9,15 @@ PORT_BIND="${PORT_BIND:-127.0.0.1:8000:8000}"
 HF_VOLUME="${HF_VOLUME:-wordtoken_huggingface_cache}"
 HEALTHCHECK_URL="${HEALTHCHECK_URL:-http://127.0.0.1:8000/health}"
 HEALTHCHECK_TIMEOUT_SECONDS="${HEALTHCHECK_TIMEOUT_SECONDS:-900}"
+TORCH_VERSION="${TORCH_VERSION:-2.10.0}"
+TORCH_INDEX_URL="${TORCH_INDEX_URL:-https://download.pytorch.org/whl/cpu}"
 
 cd "$DEPLOY_PATH"
 
-docker build -t "$IMAGE_NAME" .
+DOCKER_BUILDKIT=1 docker build --pull \
+  --build-arg "TORCH_VERSION=$TORCH_VERSION" \
+  --build-arg "TORCH_INDEX_URL=$TORCH_INDEX_URL" \
+  -t "$IMAGE_NAME" .
 docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
 docker run -d \
   --name "$CONTAINER_NAME" \

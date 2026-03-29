@@ -6,3 +6,9 @@ __pycache__
 .pytest_cache
 .ruff_cache
 tests
+.github
+deploy
+compose.yaml
+pyproject.toml
+requirements-dev.txt
+AGENT.md
